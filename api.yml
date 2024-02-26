@@ -1,0 +1,169 @@
+# This is the OpenAPI specification for your service. It is used to generate the client code.
+# To generate the server code, use the Gradle task `openApiGenerate`. The 
+# generated code will be placed in `build/generate-resources/main`.
+#
+# We will evaluate you based on how well you design your API.
+# 1. How well it follows REST principles.
+# 2. How easy it is to understand and use.
+#
+# References
+# 1. https://swagger.io/specification/
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: User Service
+  license:
+    name: MIT
+servers:
+  - url: http://localhost
+paths:
+  /users:
+    post:
+      summary: Register a new user to the service, using the specified full name, phone number, and password
+      operationId: registerUser
+      requestBody:
+        description: The user data to be registered to the service.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterUserRequest"
+      responses:
+        '201':
+          description: The user successfully inserted with a generated UUID
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        '400':
+          description: One or more registration fields' values are invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Updates the logged in user info. Allows for phone number & full name update
+      operationId: updateUser
+      requestBody:
+        description: The user data to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        '200':
+          description: The user successfully updated
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        '400':
+          description: One or more updated fields' values are invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth:
+    post:
+      summary: Logs a user in to the system & return the logged in user ID & generated jwt token
+      operationId: authenticateUser
+      requestBody:
+        description: The user credentials to log in
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthenticateUserRequest"
+      responses:
+        '200':
+          description: The user successfully inserted with a generated UUID
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/AuthenticateUserResponse"
+        '400':
+          description: Invalid credentials used for login
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /me:
+    get:
+      summary: Get the logged in user info
+      operationId: getLoggedInUser
+      responses:
+        '200':
+          description: Successfully get the logged in user info
+          content:
+            application/json:    
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        '403':
+          description: User is not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    RegisterUserRequest:
+      type: object
+      required:
+        - full_name
+        - phone_number
+        - password
+      properties:
+        full_name:
+          type: string
+        phone_number:
+          type: string
+        password:
+          type: string
+    UserResponse:
+      type: object
+      required:
+        - id
+        - full_name
+        - phone_number
+      properties:
+        id:
+          type: string
+        full_name:
+          type: string
+        phone_number:
+          type: string
+    AuthenticateUserRequest:
+      type: object
+      required:
+        - phone_number
+        - password
+      properties:
+        phone_number:
+          type: string
+        password:
+          type: string
+    AuthenticateUserResponse:
+      type: object
+      required:
+        - id
+        - token
+      properties:
+        id:
+          type: string
+        token:
+          type: string
+    UpdateUserRequest:
+      type: object
+      properties:
+        phone_number:
+          type: string
+        full_name:
+          type: string
+    ErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
