@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/SawitProRecruitment/UserService/generated"
 	"github.com/go-playground/validator/v10"
@@ -66,15 +67,38 @@ func (v RegisterUserValidator) Validate() FieldErrors {
 	}
 
 	// passwords are validated using separate case from regex (not from validator, since it doesn't support regex validations)
-	// pattern := regexp.MustCompile(`^(?=.*[A-Z])(?=.*\d)(?=.*\W).+$`)
-	// if v.Password != "" && !pattern.MatchString(v.Password) {
-	// 	fieldErrors = append(fieldErrors, FieldError{
-	// 		Field:      "password",
-	// 		Validation: "password must contain at least 1 capital characters, 1 number, and 1 special (nonalpha-numeric) characters",
-	// 	})
-	// }
+	if v.Password != "" && !isPasswordValid(v.Password) {
+		fieldErrors = append(fieldErrors, generated.FieldError{
+			Field:      "Password",
+			Validation: "must contain at least 1 capital characters, 1 number, and 1 special (nonalpha-numeric) characters",
+		})
+	}
 
 	return fieldErrors
+}
+
+// helper function to check if password met the following criteria:
+// containing at least 1 digit, 1 symbol, and 1 uppercase letter.
+// this is done since regexp golang does not support lookaheads.
+func isPasswordValid(password string) bool {
+	var (
+		containUppercase = false
+		containSymbol    = false
+		containDigit     = false
+	)
+
+	for _, c := range password {
+		switch {
+		case unicode.IsNumber(c):
+			containDigit = true
+		case unicode.IsUpper(c):
+			containUppercase = true
+		case unicode.IsPunct(c) || unicode.IsSymbol(c):
+			containSymbol = true
+		}
+	}
+
+	return containUppercase && containDigit && containSymbol
 }
 
 type AuthenticateUserValidator struct {

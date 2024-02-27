@@ -135,6 +135,20 @@ func TestRegisterUserValidator_Validate(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "password does not met character rule",
+			fields: fields{
+				FullName:    "john smith",
+				PhoneNumber: "+628123456789",
+				Password:    "testingtesting",
+			},
+			want: FieldErrors{
+				{
+					Field:      "Password",
+					Validation: "must contain at least 1 capital characters, 1 number, and 1 special (nonalpha-numeric) characters",
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
