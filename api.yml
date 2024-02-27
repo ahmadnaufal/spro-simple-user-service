@@ -126,6 +126,7 @@ components:
         - id
         - full_name
         - phone_number
+        - login_count
       properties:
         id:
           type: string
@@ -133,6 +134,9 @@ components:
           type: string
         phone_number:
           type: string
+        login_count:
+          type: integer 
+          format: int64
     AuthenticateUserRequest:
       type: object
       required:

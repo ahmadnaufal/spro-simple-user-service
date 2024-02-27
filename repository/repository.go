@@ -2,13 +2,12 @@
 package repository
 
 import (
-	"database/sql"
-
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
 type Repository struct {
-	Db *sql.DB
+	Db *sqlx.DB
 }
 
 type NewRepositoryOptions struct {
@@ -16,7 +15,7 @@ type NewRepositoryOptions struct {
 }
 
 func NewRepository(opts NewRepositoryOptions) *Repository {
-	db, err := sql.Open("postgres", opts.Dsn)
+	db, err := sqlx.Open("postgres", opts.Dsn)
 	if err != nil {
 		panic(err)
 	}

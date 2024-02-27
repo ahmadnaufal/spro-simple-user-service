@@ -30,3 +30,7 @@ build
 generated
 
 .DS_Store
+
+cert
+
+cmd/__debug_bin
