@@ -29,7 +29,8 @@ func (s *Server) RegisterUser(c echo.Context) error {
 	fieldErrors := payload.Validate()
 	if len(fieldErrors) > 0 {
 		return c.JSON(http.StatusBadRequest, generated.ErrorResponse{
-			Message: fieldErrors.Error(),
+			Message:          "field validation failed",
+			ValidationErrors: (*[]generated.FieldError)(&fieldErrors),
 		})
 	}
 

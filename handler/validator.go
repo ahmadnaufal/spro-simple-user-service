@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/SawitProRecruitment/UserService/generated"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -13,7 +14,7 @@ func init() {
 	validate = validator.New(validator.WithRequiredStructEnabled())
 }
 
-type FieldErrors []FieldError
+type FieldErrors []generated.FieldError
 
 func (fe FieldErrors) Error() string {
 	if len(fe) < 1 {
@@ -28,9 +29,19 @@ func (fe FieldErrors) Error() string {
 	return strings.Join(errStrings, "; ")
 }
 
-type FieldError struct {
-	Field      string
-	Validation string
+func validationMessages(tag, param string) string {
+	switch tag {
+	case "required":
+		return "field is required"
+	case "min":
+		return fmt.Sprintf("length is less than minimum allowed length of %s", param)
+	case "max":
+		return fmt.Sprintf("length is more than maximum allowed length of %s", param)
+	case "startswith":
+		return fmt.Sprintf("value should begin with %s", param)
+	default:
+		return tag
+	}
 }
 
 type RegisterUserValidator struct {
@@ -47,9 +58,9 @@ func (v RegisterUserValidator) Validate() FieldErrors {
 		validationErrors := err.(validator.ValidationErrors)
 
 		for _, validationErr := range validationErrors {
-			fieldErrors = append(fieldErrors, FieldError{
+			fieldErrors = append(fieldErrors, generated.FieldError{
 				Field:      validationErr.Field(),
-				Validation: validationErr.Error(),
+				Validation: validationMessages(validationErr.Tag(), validationErr.Param()),
 			})
 		}
 	}
@@ -71,24 +82,6 @@ type AuthenticateUserValidator struct {
 	Password    string `json:"password" validate:"required"`
 }
 
-func (v AuthenticateUserValidator) Validate() FieldErrors {
-	fieldErrors := FieldErrors{}
-
-	err := validate.Struct(v)
-	if err != nil {
-		validationErrors := err.(validator.ValidationErrors)
-
-		for _, validationErr := range validationErrors {
-			fieldErrors = append(fieldErrors, FieldError{
-				Field:      validationErr.Field(),
-				Validation: validationErr.Error(),
-			})
-		}
-	}
-
-	return fieldErrors
-}
-
 type UpdateUserValidator struct {
 	FullName    *string `json:"full_name" validate:"omitempty,min=3,max=60"`
 	PhoneNumber *string `json:"phone_number" validate:"omitempty,min=10,max=13,startswith=+62"`
@@ -102,7 +95,7 @@ func (v UpdateUserValidator) Validate() FieldErrors {
 		validationErrors := err.(validator.ValidationErrors)
 
 		for _, validationErr := range validationErrors {
-			fieldErrors = append(fieldErrors, FieldError{
+			fieldErrors = append(fieldErrors, generated.FieldError{
 				Field:      validationErr.Field(),
 				Validation: validationErr.Error(),
 			})

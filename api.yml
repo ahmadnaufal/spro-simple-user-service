@@ -171,3 +171,17 @@ components:
       properties:
         message:
           type: string
+        validation_errors:
+          type: array 
+          items:
+            $ref: "#/components/schemas/FieldError"
+    FieldError:
+      type: object
+      required:
+        - field 
+        - validation
+      properties:
+        field:
+          type: string
+        validation:
+          type: string
