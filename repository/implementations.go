@@ -84,7 +84,7 @@ func (r *Repository) UpdateUser(ctx context.Context, id string, input UpdateUser
 	}
 
 	rowsAffected, _ := res.RowsAffected()
-	if rowsAffected > 1 {
+	if rowsAffected != 1 {
 		err = fmt.Errorf("unexpected behavior: expected update 1 row but got %d", rowsAffected)
 		return
 	}
@@ -108,7 +108,7 @@ func (r *Repository) IncrementLoginCount(ctx context.Context, id string) error {
 	}
 
 	rowsAffected, _ := res.RowsAffected()
-	if rowsAffected > 1 {
+	if rowsAffected != 1 {
 		err = fmt.Errorf("unexpected behavior: expected update 1 row but got %d", rowsAffected)
 		return err
 	}
