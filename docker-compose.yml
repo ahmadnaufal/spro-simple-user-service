@@ -7,6 +7,8 @@ services:
       DATABASE_URL: postgres://postgres:postgres@docker:5432/database?sslmode=disable
       RSA_PRIVATE_KEY_PATH: ./cert/id_rsa
       RSA_PUBLIC_KEY_PATH: ./cert/id_rsa.pub
+    volumes:
+      - ./cert:/cert
     depends_on:
       db:
         condition: service_healthy
