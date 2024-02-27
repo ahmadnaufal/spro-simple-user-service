@@ -256,6 +256,102 @@ func TestServer_AuthenticateUser(t *testing.T) {
 			},
 			wantStatus: http.StatusOK,
 		},
+		{
+			name: "user with the phone number not found",
+			fields: fields{
+				Repository: func() *repository.MockRepositoryInterface {
+					ctrl := gomock.NewController(t)
+					mockRepo := repository.NewMockRepositoryInterface(ctrl)
+
+					mockRepo.EXPECT().
+						GetUserByPhoneNumber(gomock.Any(), user.PhoneNumber).
+						Return(repository.UserOutput{}, sql.ErrNoRows)
+
+					return mockRepo
+				}(),
+				JWT: handler.NewJWT([]byte(RsaPublicKey), []byte(RsaPrivateKey)),
+			},
+			args: args{
+				payload: map[string]interface{}{
+					"phone_number": "+62812345678",
+					"password":     "testpass!",
+				},
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "invalid password",
+			fields: fields{
+				Repository: func() *repository.MockRepositoryInterface {
+					ctrl := gomock.NewController(t)
+					mockRepo := repository.NewMockRepositoryInterface(ctrl)
+
+					mockRepo.EXPECT().
+						GetUserByPhoneNumber(gomock.Any(), user.PhoneNumber).
+						Return(user, nil)
+
+					return mockRepo
+				}(),
+				JWT: handler.NewJWT([]byte(RsaPublicKey), []byte(RsaPrivateKey)),
+			},
+			args: args{
+				payload: map[string]interface{}{
+					"phone_number": "+62812345678",
+					"password":     "testpass!invalid",
+				},
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "failed when generating jwt",
+			fields: fields{
+				Repository: func() *repository.MockRepositoryInterface {
+					ctrl := gomock.NewController(t)
+					mockRepo := repository.NewMockRepositoryInterface(ctrl)
+
+					mockRepo.EXPECT().
+						GetUserByPhoneNumber(gomock.Any(), user.PhoneNumber).
+						Return(user, nil)
+
+					return mockRepo
+				}(),
+				JWT: handler.NewJWT([]byte("random_public_key"), []byte("random_private_key")),
+			},
+			args: args{
+				payload: map[string]interface{}{
+					"phone_number": "+62812345678",
+					"password":     "testpass!",
+				},
+			},
+			wantStatus: http.StatusInternalServerError,
+		},
+		{
+			name: "failed when incrementing login counter",
+			fields: fields{
+				Repository: func() *repository.MockRepositoryInterface {
+					ctrl := gomock.NewController(t)
+					mockRepo := repository.NewMockRepositoryInterface(ctrl)
+
+					mockRepo.EXPECT().
+						GetUserByPhoneNumber(gomock.Any(), user.PhoneNumber).
+						Return(user, nil)
+
+					mockRepo.EXPECT().
+						IncrementLoginCount(gomock.Any(), user.ID).
+						Return(assert.AnError)
+
+					return mockRepo
+				}(),
+				JWT: handler.NewJWT([]byte(RsaPublicKey), []byte(RsaPrivateKey)),
+			},
+			args: args{
+				payload: map[string]interface{}{
+					"phone_number": "+62812345678",
+					"password":     "testpass!",
+				},
+			},
+			wantStatus: http.StatusInternalServerError,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -319,6 +415,41 @@ func TestServer_GetLoggedInUser(t *testing.T) {
 				},
 			},
 			wantStatus: http.StatusOK,
+		},
+		{
+			name: "user is not logged in",
+			fields: fields{
+				Repository: func() *repository.MockRepositoryInterface {
+					ctrl := gomock.NewController(t)
+					mockRepo := repository.NewMockRepositoryInterface(ctrl)
+					return mockRepo
+				}(),
+				JWT: handler.NewJWT([]byte(RsaPublicKey), []byte(RsaPrivateKey)),
+			},
+			args:       args{},
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name: "error fetching user data",
+			fields: fields{
+				Repository: func() *repository.MockRepositoryInterface {
+					ctrl := gomock.NewController(t)
+					mockRepo := repository.NewMockRepositoryInterface(ctrl)
+
+					mockRepo.EXPECT().
+						GetUserByID(gomock.Any(), user.ID).
+						Return(repository.UserOutput{}, assert.AnError)
+
+					return mockRepo
+				}(),
+				JWT: handler.NewJWT([]byte(RsaPublicKey), []byte(RsaPrivateKey)),
+			},
+			args: args{
+				header: map[string]string{
+					"Authorization": fmt.Sprintf("Bearer %s", dummyJWT),
+				},
+			},
+			wantStatus: http.StatusInternalServerError,
 		},
 	}
 	for _, tt := range tests {
@@ -403,6 +534,173 @@ func TestServer_UpdateUser(t *testing.T) {
 				},
 			},
 			wantStatus: http.StatusOK,
+		},
+		{
+			name: "user is not logged in",
+			fields: fields{
+				Repository: func() *repository.MockRepositoryInterface {
+					ctrl := gomock.NewController(t)
+					mockRepo := repository.NewMockRepositoryInterface(ctrl)
+					return mockRepo
+				}(),
+				JWT: handler.NewJWT([]byte(RsaPublicKey), []byte(RsaPrivateKey)),
+			},
+			args: args{
+				payload: map[string]interface{}{
+					"full_name":    "test new",
+					"phone_number": "+62812345677",
+				},
+			},
+			wantStatus: http.StatusForbidden,
+		},
+		{
+			name: "successfully updates only phone",
+			fields: fields{
+				Repository: func() *repository.MockRepositoryInterface {
+					ctrl := gomock.NewController(t)
+					mockRepo := repository.NewMockRepositoryInterface(ctrl)
+
+					mockRepo.EXPECT().
+						GetUserByID(gomock.Any(), user.ID).
+						Return(user, nil)
+
+					mockRepo.EXPECT().
+						GetUserByPhoneNumber(gomock.Any(), "+62812345677").
+						Return(repository.UserOutput{}, sql.ErrNoRows)
+
+					mockRepo.EXPECT().
+						UpdateUser(gomock.Any(), user.ID, repository.UpdateUserInput{
+							FullName:    user.FullName,
+							PhoneNumber: "+62812345677",
+						}).
+						Return(nil)
+
+					return mockRepo
+				}(),
+				JWT: handler.NewJWT([]byte(RsaPublicKey), []byte(RsaPrivateKey)),
+			},
+			args: args{
+				header: map[string]string{
+					"Authorization": fmt.Sprintf("Bearer %s", dummyJWT),
+				},
+				payload: map[string]interface{}{
+					"phone_number": "+62812345677",
+				},
+			},
+			wantStatus: http.StatusOK,
+		},
+		{
+			name: "successfully updates only full name",
+			fields: fields{
+				Repository: func() *repository.MockRepositoryInterface {
+					ctrl := gomock.NewController(t)
+					mockRepo := repository.NewMockRepositoryInterface(ctrl)
+
+					mockRepo.EXPECT().
+						GetUserByID(gomock.Any(), user.ID).
+						Return(user, nil)
+
+					mockRepo.EXPECT().
+						UpdateUser(gomock.Any(), user.ID, repository.UpdateUserInput{
+							FullName:    "test new",
+							PhoneNumber: user.PhoneNumber,
+						}).
+						Return(nil)
+
+					return mockRepo
+				}(),
+				JWT: handler.NewJWT([]byte(RsaPublicKey), []byte(RsaPrivateKey)),
+			},
+			args: args{
+				header: map[string]string{
+					"Authorization": fmt.Sprintf("Bearer %s", dummyJWT),
+				},
+				payload: map[string]interface{}{
+					"full_name": "test new",
+				},
+			},
+			wantStatus: http.StatusOK,
+		},
+		{
+			name: "some field failed validation",
+			fields: fields{
+				Repository: func() *repository.MockRepositoryInterface {
+					ctrl := gomock.NewController(t)
+					mockRepo := repository.NewMockRepositoryInterface(ctrl)
+					return mockRepo
+				}(),
+				JWT: handler.NewJWT([]byte(RsaPublicKey), []byte(RsaPrivateKey)),
+			},
+			args: args{
+				header: map[string]string{
+					"Authorization": fmt.Sprintf("Bearer %s", dummyJWT),
+				},
+				payload: map[string]interface{}{
+					"phone_number": "12345677",
+				},
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "error updated phone number already exists",
+			fields: fields{
+				Repository: func() *repository.MockRepositoryInterface {
+					ctrl := gomock.NewController(t)
+					mockRepo := repository.NewMockRepositoryInterface(ctrl)
+
+					mockRepo.EXPECT().
+						GetUserByID(gomock.Any(), user.ID).
+						Return(user, nil)
+
+					mockRepo.EXPECT().
+						GetUserByPhoneNumber(gomock.Any(), "+62812345677").
+						Return(repository.UserOutput{ID: "exists"}, nil)
+
+					return mockRepo
+				}(),
+				JWT: handler.NewJWT([]byte(RsaPublicKey), []byte(RsaPrivateKey)),
+			},
+			args: args{
+				header: map[string]string{
+					"Authorization": fmt.Sprintf("Bearer %s", dummyJWT),
+				},
+				payload: map[string]interface{}{
+					"phone_number": "+62812345677",
+				},
+			},
+			wantStatus: http.StatusConflict,
+		},
+		{
+			name: "failed update user",
+			fields: fields{
+				Repository: func() *repository.MockRepositoryInterface {
+					ctrl := gomock.NewController(t)
+					mockRepo := repository.NewMockRepositoryInterface(ctrl)
+
+					mockRepo.EXPECT().
+						GetUserByID(gomock.Any(), user.ID).
+						Return(user, nil)
+
+					mockRepo.EXPECT().
+						UpdateUser(gomock.Any(), user.ID, repository.UpdateUserInput{
+							FullName:    "test new",
+							PhoneNumber: user.PhoneNumber,
+						}).
+						Return(assert.AnError)
+
+					return mockRepo
+				}(),
+				JWT: handler.NewJWT([]byte(RsaPublicKey), []byte(RsaPrivateKey)),
+			},
+			args: args{
+				header: map[string]string{
+					"Authorization": fmt.Sprintf("Bearer %s", dummyJWT),
+				},
+				payload: map[string]interface{}{
+					"full_name": "test new",
+				},
+			},
+			wantStatus: http.StatusInternalServerError,
 		},
 	}
 	for _, tt := range tests {
