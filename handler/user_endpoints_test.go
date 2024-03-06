@@ -375,7 +375,7 @@ func TestServer_AuthenticateUser(t *testing.T) {
 
 func TestServer_GetLoggedInUser(t *testing.T) {
 	user := repository.UserOutput{
-		ID:          "11b762e1-dc40-40c1-91e2-54bb82c09ec7",
+		ID:          "c118a1a9-28f1-4137-9093-87487d24e5d9",
 		FullName:    "test",
 		PhoneNumber: "+62812345678",
 		LoginCount:  1,
@@ -478,7 +478,7 @@ func TestServer_GetLoggedInUser(t *testing.T) {
 
 func TestServer_UpdateUser(t *testing.T) {
 	user := repository.UserOutput{
-		ID:          "11b762e1-dc40-40c1-91e2-54bb82c09ec7",
+		ID:          "c118a1a9-28f1-4137-9093-87487d24e5d9",
 		FullName:    "test",
 		PhoneNumber: "+62812345678",
 		LoginCount:  1,
